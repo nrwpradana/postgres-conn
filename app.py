@@ -1,37 +1,31 @@
 import os
-import streamlit as st
-from connection import KaggleConnection
+import shutil
+from streamlit.connections import ExperimentalBaseConnection
+from kaggle.api.kaggle_api_extended import KaggleApi
 
-def main():
-    st.title("Kaggle Dataset Downloader")
+class KaggleConnection(ExperimentalBaseConnection[KaggleApi]):
+    """st.experimental_connection implementation for Kaggle"""
 
-    # Create a connection to Kaggle using the custom KaggleConnection class
-    with KaggleConnection() as kaggle_conn:
-        # Check if the user has provided Kaggle API key
-        if not kaggle_conn._instance:
-            st.warning("Please provide your Kaggle username and API key to access Kaggle datasets.")
-            return
+    def _connect(self, **kwargs) -> KaggleApi:
+        # Get the Kaggle API key from the user
+        kaggle_username = st.text_input("Enter your Kaggle username:")
+        kaggle_key = st.text_input("Enter your Kaggle API key:", type="password")
 
-        # Get the dataset name from the user
-        dataset_name = st.text_input("Enter Kaggle dataset name:")
+        if not kaggle_username or not kaggle_key:
+            st.warning("Please provide your Kaggle username and API key.")
+            return None
 
-        # Check if the dataset name is provided
-        if dataset_name:
-            st.write("Downloading dataset...")
-            # Define the download path
-            download_path = os.path.join(".", dataset_name)
+        # Save the Kaggle API key to kaggle.json format in the expected location
+        kaggle_json_path = os.path.expanduser("~/.kaggle/kaggle.json")
+        os.makedirs(os.path.dirname(kaggle_json_path), exist_ok=True)
+        with open(kaggle_json_path, "w") as f:
+            f.write('{"username":"' + kaggle_username + '","key":"' + kaggle_key + '"}')
 
-            try:
-                # Download the dataset
-                kaggle_conn.dataset_download_files(dataset_name, path=download_path)
+        # Connect to Kaggle API using the provided key
+        api = KaggleApi()
+        api.authenticate()
 
-                # List the downloaded files
-                st.write("Downloaded files:")
-                for file in os.listdir(download_path):
-                    st.write(file)
+        return api
 
-            except Exception as e:
-                st.error(f"Error downloading dataset: {str(e)}")
-
-if __name__ == "__main__":
-    main()
+    def dataset_download_files(self, dataset: str, path: str) -> None:
+        self._instance.dataset_download_files(dataset, path=path)
