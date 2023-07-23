@@ -1,30 +1,27 @@
 import streamlit as st
+import pandas as pd
 from connection import PostgresConnection
-import json
 
 # Assuming you have already uploaded the 'postgres_connection.py' file to the Colab environment.
 
-# Upload the database credentials file
-uploaded = st.file_uploader("Upload PostgreSQL credentials JSON file", type=["json"])
+# Upload the SQL file
+uploaded = st.file_uploader("Upload SQL file", type=["sql"])
 
 if uploaded:
-    db_config = json.load(uploaded)
+    # Read the SQL file content
+    sql_content = uploaded.read().decode()
 
     # Create the connection
-    conn = st.experimental_connection("postgres", type=PostgresConnection, **db_config)
+    conn = st.experimental_connection("postgres", type=PostgresConnection)
 
-    # Test query to verify the connection
-    query = "SELECT version();"
+    # Execute the SQL query to fetch the top 10 records
+    query = sql_content + " LIMIT 10;"
     result = conn.query(query)
 
     # Display the query result
-    st.write("PostgreSQL version:")
-    st.write(result)
-    
-    # Display the PostgreSQL version from the JSON file
-    postgres_version = db_config.get("postgres_version")
-    if postgres_version:
-        st.write("Configured PostgreSQL version:")
-        st.write(postgres_version)
+    if result is not None:
+        df = pd.DataFrame(result, columns=result[0].keys())
+        st.write("Top 10 records:")
+        st.write(df)
     else:
-        st.write("PostgreSQL version is not specified in the JSON file.")
+        st.write("No data retrieved from the SQL file.")
