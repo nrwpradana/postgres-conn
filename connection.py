@@ -5,7 +5,6 @@ import psycopg2
 import pandas as pd
 
 class PostgresConnection(ExperimentalBaseConnection[psycopg2.extensions.connection]):
-    """Basic st.experimental_connection implementation for PostgreSQL"""
 
     def _connect(self, **kwargs) -> psycopg2.extensions.connection:
         if 'dbname' in kwargs:
