@@ -1,31 +1,21 @@
-import os
-import shutil
-from streamlit.connections import ExperimentalBaseConnection
-from kaggle.api.kaggle_api_extended import KaggleApi
+import streamlit as st
+from postgres_connection import PostgresConnection
 
-class KaggleConnection(ExperimentalBaseConnection[KaggleApi]):
-    """st.experimental_connection implementation for Kaggle"""
+# Assuming you have already uploaded the 'postgres_connection.py' file to the Colab environment.
 
-    def _connect(self, **kwargs) -> KaggleApi:
-        # Get the Kaggle API key from the user
-        kaggle_username = st.text_input("Enter your Kaggle username:")
-        kaggle_key = st.text_input("Enter your Kaggle API key:", type="password")
+# Upload the database credentials file
+uploaded = st.file_uploader("Upload PostgreSQL credentials JSON file", type=["json"])
 
-        if not kaggle_username or not kaggle_key:
-            st.warning("Please provide your Kaggle username and API key.")
-            return None
+if uploaded:
+    db_config = json.load(uploaded)
 
-        # Save the Kaggle API key to kaggle.json format in the expected location
-        kaggle_json_path = os.path.expanduser("~/.kaggle/kaggle.json")
-        os.makedirs(os.path.dirname(kaggle_json_path), exist_ok=True)
-        with open(kaggle_json_path, "w") as f:
-            f.write('{"username":"' + kaggle_username + '","key":"' + kaggle_key + '"}')
+    # Create the connection
+    conn = st.experimental_connection("postgres", type=PostgresConnection, **db_config)
 
-        # Connect to Kaggle API using the provided key
-        api = KaggleApi()
-        api.authenticate()
+    # Test query to verify the connection
+    query = "SELECT version();"
+    result = conn.query(query)
 
-        return api
-
-    def dataset_download_files(self, dataset: str, path: str) -> None:
-        self._instance.dataset_download_files(dataset, path=path)
+    # Display the query result
+    st.write("PostgreSQL version:")
+    st.write(result)

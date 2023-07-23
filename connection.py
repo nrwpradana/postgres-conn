@@ -1,23 +1,49 @@
 from streamlit.connections import ExperimentalBaseConnection
-from kaggle.api.kaggle_api_extended import KaggleApi
+from streamlit.runtime.caching import cache_data
 
-class KaggleConnection(ExperimentalBaseConnection[KaggleApi]):
-    """st.experimental_connection implementation for Kaggle"""
+import psycopg2
+import pandas as pd
 
-    def _connect(self, **kwargs) -> KaggleApi:
-        # Get the Kaggle API key from the user
-        kaggle_username = st.text_input("Enter your Kaggle username:")
-        kaggle_key = st.text_input("Enter your Kaggle API key:", type="password")
+class PostgresConnection(ExperimentalBaseConnection[psycopg2.extensions.connection]):
+    """Basic st.experimental_connection implementation for PostgreSQL"""
 
-        if not kaggle_username or not kaggle_key:
-            st.warning("Please provide your Kaggle username and API key.")
-            return None
+    def _connect(self, **kwargs) -> psycopg2.extensions.connection:
+        if 'dbname' in kwargs:
+            dbname = kwargs.pop('dbname')
+        else:
+            dbname = self._secrets['dbname']
+        
+        if 'user' in kwargs:
+            user = kwargs.pop('user')
+        else:
+            user = self._secrets['user']
+        
+        if 'password' in kwargs:
+            password = kwargs.pop('password')
+        else:
+            password = self._secrets['password']
+        
+        if 'host' in kwargs:
+            host = kwargs.pop('host')
+        else:
+            host = self._secrets['host']
+        
+        if 'port' in kwargs:
+            port = kwargs.pop('port')
+        else:
+            port = self._secrets['port']
 
-        # Connect to Kaggle API using the provided key
-        api = KaggleApi()
-        api.authenticate(username=kaggle_username, key=kaggle_key)
+        return psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port, **kwargs)
 
-        return api
+    def cursor(self) -> psycopg2.extensions.cursor:
+        return self._instance.cursor()
 
-    def dataset_download_files(self, dataset: str, path: str) -> None:
-        self._instance.dataset_download_files(dataset, path=path)
+    def query(self, query: str, ttl: int = 3600, **kwargs) -> pd.DataFrame:
+        @cache_data(ttl=ttl)
+        def _query(query: str, **kwargs) -> pd.DataFrame:
+            cursor = self.cursor()
+            cursor.execute(query, **kwargs)
+            columns = [desc[0] for desc in cursor.description]
+            return pd.DataFrame(cursor.fetchall(), columns=columns)
+
+        return _query(query, **kwargs)
