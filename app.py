@@ -1,5 +1,5 @@
 import streamlit as st
-from postgres_connection import PostgresConnection
+from connection import PostgresConnection
 
 # Assuming you have already uploaded the 'postgres_connection.py' file to the Colab environment.
 
