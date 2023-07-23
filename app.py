@@ -20,3 +20,11 @@ if uploaded:
     # Display the query result
     st.write("PostgreSQL version:")
     st.write(result)
+    
+    # Display the PostgreSQL version from the JSON file
+    postgres_version = db_config.get("postgres_version")
+    if postgres_version:
+        st.write("Configured PostgreSQL version:")
+        st.write(postgres_version)
+    else:
+        st.write("PostgreSQL version is not specified in the JSON file.")
