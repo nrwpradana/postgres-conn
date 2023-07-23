@@ -2,7 +2,7 @@ import streamlit as st
 from connection import PostgresConnection
 import json
 
-st.write("Make sure the PostgreSQL server is running.")
+st.markdown("**Make sure the PostgreSQL server is running.**")
 
 # Upload the database credentials file
 uploaded = st.file_uploader("Upload PostgreSQL credentials JSON file", type=["json"])
